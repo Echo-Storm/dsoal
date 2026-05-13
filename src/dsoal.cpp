@@ -185,6 +185,13 @@ bool load_openal()
     LOAD_FUNCPTR(EAXSetDirect);
     LOAD_FUNCPTR(EAXGetDirect);
     LOAD_FUNCPTR(alBufferDataStaticDirect);
+    LOAD_FUNCPTR(alGenEffectsDirect);
+    LOAD_FUNCPTR(alDeleteEffectsDirect);
+    LOAD_FUNCPTR(alEffectiDirect);
+    LOAD_FUNCPTR(alEffectfDirect);
+    LOAD_FUNCPTR(alGenAuxiliaryEffectSlotsDirect);
+    LOAD_FUNCPTR(alDeleteAuxiliaryEffectSlotsDirect);
+    LOAD_FUNCPTR(alAuxiliaryEffectSlotiDirect);
 #undef LOAD_FUNCPTR
 
     return true;

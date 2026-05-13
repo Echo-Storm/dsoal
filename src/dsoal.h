@@ -15,7 +15,6 @@
 #include <dsound.h>
 
 #include "AL/al.h"
-#include "AL/alc.h"
 #include "AL/alext.h"
 
 
@@ -176,6 +175,13 @@ inline LPALSPEEDOFSOUNDDIRECT alSpeedOfSoundDirect{};
 inline LPEAXSETDIRECT EAXSetDirect{};
 inline LPEAXGETDIRECT EAXGetDirect{};
 inline LPALBUFFERDATASTATICDIRECT alBufferDataStaticDirect{};
+inline LPALGENEFFECTSDIRECT alGenEffectsDirect{};
+inline LPALDELETEEFFECTSDIRECT alDeleteEffectsDirect{};
+inline LPALEFFECTIDIRECT alEffectiDirect{};
+inline LPALEFFECTFDIRECT alEffectfDirect{};
+inline LPALGENAUXILIARYEFFECTSLOTSDIRECT alGenAuxiliaryEffectSlotsDirect{};
+inline LPALDELETEAUXILIARYEFFECTSLOTSDIRECT alDeleteAuxiliaryEffectSlotsDirect{};
+inline LPALAUXILIARYEFFECTSLOTIDIRECT alAuxiliaryEffectSlotiDirect{};
 
 #ifndef IN_IDE_PARSER
 #define alcCreateContext palcCreateContext
