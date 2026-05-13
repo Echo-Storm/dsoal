@@ -1,3 +1,65 @@
+## Work in Progress — DS8 FX Implementation
+
+This fork is working toward implementing IDirectSoundFXDistortion8,
+IDirectSoundFXEcho8, and IDirectSoundFXParamEq8 via OpenAL EFX, restoring
+voice modulation filters (power armor, masks, etc.) in games like Fallout
+New Vegas that use the DS8 FX pipeline. See dsfx.h / dsfx.cpp.
+
+What needs to be implemented in DSOAL
+The two stub functions
+Buffer::SetFX (buffer.cpp line 1343) — currently logs "Unsupported effect" and returns DSERR_FXUNAVAILABLE. Needs to create OpenAL EFX effect objects and store them on the buffer.
+Buffer::GetObjectInPath (buffer.cpp line 1442) — currently returns E_NOTIMPL. Needs to return a pointer to the effect interface object so the game can call SetAllParameters on it.
+
+The effects FNV uses
+From the DSOAL log lines in those GitHub issues, FNV calls SetFX with GUID_DSFX_STANDARD_DISTORTION. The GUIDs are already known to DSOAL via guidprinter.h. The three effects FNV uses and their OpenAL EFX equivalents:
+DirectSound FXGUIDOpenAL EFX typeAL_EFFECT_TYPEGUID_DSFX_STANDARD_DISTORTION{120ced89...}AL_EFFECT_DISTORTION0x0003GUID_DSFX_STANDARD_ECHOalready in guidprinter.hAL_EFFECT_ECHO0x0004GUID_DSFX_STANDARD_PARAMEQalready in guidprinter.hAL_EFFECT_EQUALIZER0x000C
+
+Parameter mappings
+Distortion (DSFXDistortion → OpenAL EFX):
+cpp// DSFXDistortion struct fields -> OpenAL EFX params
+fGain         -> AL_DISTORTION_GAIN          // -60 to 0 dB -> 0.01 to 1.0
+fEdge         -> AL_DISTORTION_EDGE          // 0 to 100 -> 0.0 to 1.0
+fPostEQCenterFrequency -> AL_DISTORTION_EQCENTER    // 100-8000 Hz -> same
+fPostEQBandwidth       -> AL_DISTORTION_EQBANDWIDTH // 100-8000 Hz -> same
+fPreLowpassCutoff      -> AL_DISTORTION_LOWPASS_CUTOFF // 100-8000 Hz -> same
+Echo (DSFXEcho → OpenAL EFX):
+cppfWetDryMix    -> AL_ECHO_FEEDBACK    // approximate
+fFeedback     -> AL_ECHO_FEEDBACK
+fLeftDelay    -> AL_ECHO_DELAY       // ms -> seconds (/1000)
+fRightDelay   -> AL_ECHO_LRDELAY    // ms -> seconds (/1000)
+lPanDelay     -> AL_ECHO_SPREAD
+ParamEQ (DSFXParamEq → OpenAL EFX):
+cppfCenter       -> AL_EQUALIZER_MID1_CENTER
+fBandwidth    -> AL_EQUALIZER_MID1_WIDTH
+fGain         -> AL_EQUALIZER_MID1_GAIN   // dB -> linear
+
+What needs to be added to buffer.h
+The Buffer class needs new members:
+cpp// Per-buffer FX state
+struct FXEntry {
+    ALuint mEffect{0};      // OpenAL effect object
+    ALuint mSlot{0};        // OpenAL aux effect slot
+    GUID   mGuid{};         // which DSFX type this is
+};
+std::vector<FXEntry> mFXList;
+And a new inner COM class for each effect type — same pattern as Buffer3D and Notify — implementing IDirectSoundFXDistortion8, IDirectSoundFXEcho8, IDirectSoundFXParamEq8.
+
+The implementation flow
+SetFX needs to:
+
+Clear any existing effects (alDeleteEffects, alDeleteAuxiliaryEffectSlots)
+For each effect in fxdescs: alGenEffects(1, &effect), alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_DISTORTION) etc.
+alGenAuxiliaryEffectSlots(1, &slot), alAuxiliaryEffectSloti(slot, AL_EFFECTSLOT_EFFECT, effect)
+Bind to the source: alSource3i(mSource, AL_AUXILIARY_SEND_FILTER, slot, 0, AL_FILTER_NULL)
+Store in mFXList, set result codes to DSFXR_LOCATED
+
+GetObjectInPath needs to:
+
+Match objectId GUID against mFXList entries
+Return a pointer to the appropriate inner COM class (IDirectSoundFXDistortion8 etc.)
+That COM class's SetAllParameters calls alEffectf(mEffect, AL_DISTORTION_GAIN, ...) etc. then alAuxiliaryEffectSloti(mSlot, AL_EFFECTSLOT_EFFECT, mEffect) to apply
+
+
 # DSOAL
 
 This project is for a DirectSound DLL replacement. It implements the
